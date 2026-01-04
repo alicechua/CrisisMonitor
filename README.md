@@ -1,2 +1,2 @@
-# CrisisMonitor
-A Crisis analyzing system that analyze a stream of information for alerting details that requires first responder intervention
+#Hurricane
+A Natural Disaster classification system that helps pinpoint disaster tweets for fast first responder intervention. 
