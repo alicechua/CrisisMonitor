@@ -1,0 +1,50 @@
+# Full CrisisMonitor stack on the AWS EC2 host (/opt/crisismonitor).
+# Written to the instance by deploy/deploy.sh; values come from the .env file
+# it generates there (REGISTRY, TAG, MONGO_ROOT_PASSWORD, WANDB_API_KEY).
+name: crisismonitor
+
+services:
+  mongodb:
+    image: mongo:7
+    restart: always
+    command: ["--wiredTigerCacheSizeGB", "0.25"]   # keep memory low on t3.small
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?}
+    ports:
+      - "27017:27017"   # security group only admits the Azure backend's IPs
+    volumes:
+      - mongo-data:/data/db
+
+  model:
+    image: ${REGISTRY:?}/crisismonitor-model:${TAG:?}
+    restart: always
+    environment:
+      WANDB_API_KEY: ${WANDB_API_KEY:?}
+    ports:
+      - "8001:80"       # security group only admits the Azure backend's IPs
+
+  backend:
+    image: ${REGISTRY:?}/crisismonitor-backend:${TAG:?}
+    restart: always
+    environment:
+      MODEL_SERVICE_HOST: model
+      MODEL_SERVICE_PORT: "80"
+      MONGO_URI: mongodb://root:${MONGO_ROOT_PASSWORD:?}@mongodb:27017/?authSource=admin
+      MONGO_DB: mlapp
+    ports:
+      - "8000:80"
+    depends_on:
+      - mongodb
+      - model
+
+  frontend:
+    image: ${REGISTRY:?}/crisismonitor-frontend:${TAG:?}
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:

@@ -28,7 +28,9 @@ events = db["events"]
 origins = [
     "http://localhost:3000",     # local dev (React/Vite/Next.js)
     "http://localhost:80", 
-    "https://disaster-classification-mscac.netlify.app/",  # deployed frontend
+    "https://disaster-classification-mscac.netlify.app",  # deployed frontend
+    "https://crisismonitor-frontend-alice.azurewebsites.net",  # deployed frontend (Azure)
+    "http://32.199.57.44",       # deployed frontend (AWS EC2)
 ]
 
 app.add_middleware(

@@ -1,0 +1,65 @@
+name: Deploy (AWS + Azure)
+
+# Rebuilds model/backend/frontend images and redeploys on every PR to main
+# (opened, new commits pushed, reopened). All logic lives in deploy/deploy.sh.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+# One deploy at a time; PRs share the same live environment.
+concurrency:
+  group: crisismonitor-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write   # Azure OIDC login
+
+env:
+  AWS_REGION: us-east-1
+  TAG: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  aws:
+    name: AWS EC2 (model + backend + frontend + MongoDB)
+    # Fork PRs get no secrets, so skip them instead of failing.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@v3   # exposes the GHA build cache to deploy.sh
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.CRISISMONITOR_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CRISISMONITOR_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: deploy/deploy.sh aws
+
+  azure:
+    name: Azure App Service (backend + frontend)
+    needs: aws   # Azure backend uses the model + MongoDB running on AWS
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.CRISISMONITOR_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CRISISMONITOR_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: deploy/deploy.sh azure

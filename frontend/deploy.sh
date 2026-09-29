@@ -1,25 +1,9 @@
 RESOURCE_GROUP="crisismonitor_group"
 LOCATION="northcentralus"
 PLAN_NAME="crisismonitor-plan"
-WEBAPP_NAME="crisismonitor-backend-alice"
-IMAGE_NAME="excila/crisismonitor-backend:latest"
-SKU="F1"          # App Service plan tier (B1 = Basic), (F1 = Free)
+WEBAPP_NAME="crisismonitor-frontend-alice"
+IMAGE_NAME="excila/crisismonitor-frontend:latest"
 PORT="80"         # Container exposed port
-SLOT="crisismonitorslot"
-
-# ---- CREATE RESOURCE GROUP ----
-echo "Creating resource group: $RESOURCE_GROUP ..."
-az group create \
-  --name "$RESOURCE_GROUP" \
-  --location "$LOCATION"
-
-# ---- CREATE APP SERVICE PLAN ----
-echo "Creating App Service plan: $PLAN_NAME ..."
-az appservice plan create \
-  --name "$PLAN_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --is-linux \
-  --sku "$SKU"
 
 # ---- CREATE WEB APP ----
 echo "Creating Web App: $WEBAPP_NAME ..."
