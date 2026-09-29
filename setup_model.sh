@@ -11,6 +11,7 @@ sudo systemctl start docker
 # ---------- Fetch model service IP ----------
 WANDB_API_KEY=$(aws ssm get-parameter \
   --name "/mlapp/model/WandbApiKey" \
+  --with-decryption \
   --query "Parameter.Value" \
   --output text 2>/dev/null || echo "")
 
